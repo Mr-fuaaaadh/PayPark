@@ -158,7 +158,7 @@ class UserProfileEdit(BaseTokenView):
 
     def get(self, request):
         try:
-            user = self.authenticate(request)
+            user, _ = self.get_user_from_token(request)
             customer = get_object_or_404(Customer,pk=user)
             serializer = CusomerPaymentDetails(customer)
             return Response({"data":serializer.data}, status=status.HTTP_200_OK)
@@ -168,7 +168,7 @@ class UserProfileEdit(BaseTokenView):
 
     def put(self, request):
         try:
-            user = self.authenticate(request)
+            user, _ = self.get_user_from_token(request)
             serializer = UserSerilzer(user, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -293,7 +293,7 @@ class ChangePasswordView(UserForgotPassword):
 class UserPasswordReset(UserProfileEdit):
     def put(self, request):
         try:
-            user = self.authenticate(request)
+            user, _ = self.get_user_from_token(request)
             if not user:
                 return self._unauthorized_response({"message":"Authentication failed"})
             
@@ -354,8 +354,7 @@ class CustomerParkingPlotReservation(BaseTokenView):
 
     def get(self, request):
         try:
-            user = self.get_user_from_token(request)
-
+            user, _ = self.get_user_from_token(request)
             user_reservations = ParkingReservationPayment.objects.filter(user=user)
             serializer = CustomerBookdPlots(user_reservations, many=True)
 
@@ -370,7 +369,7 @@ class CustomerParkingPlotReservation(BaseTokenView):
 class CustomerCancelReservation(BaseTokenView):
     def put(self, request, id):
         try:
-            user = self.get_user_from_token(request)
+            user, _ = self.get_user_from_token(request)
             reserved_plot = get_object_or_404(ParkingReservation, reservation_id=id, user_id=user)
             
             if reserved_plot.status == 'cancelled':
