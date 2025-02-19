@@ -22,6 +22,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.http import Http404
 from celery import shared_task
 from payapp.razorpay import *
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -157,27 +158,45 @@ class BaseTokenView(APIView):
 class UserProfileEdit(BaseTokenView):
 
     def get(self, request):
+        """Retrieve user profile details."""
         try:
-            user, _ = self.get_user_from_token(request)
-            customer = get_object_or_404(Customer,pk=user)
-            serializer = CusomerPaymentDetails(customer)
-            return Response({"data":serializer.data}, status=status.HTTP_200_OK)
-    
+            user_id, _ = self.get_user_from_token(request) 
+            customer = get_object_or_404(Customer, pk=user_id)
+
+            cache_key = f"user_profile_{user_id}"
+            print(cache_key)
+            customer_data = cache.get(cache_key)
+
+            if not customer_data:
+                serializer = CusomerPaymentDetails(customer)
+                customer_data = serializer.data
+                cache.set(cache_key, customer_data, timeout=60 * 5)  # Cache for 5 minutes
+
+            return Response({"data": customer_data}, status=status.HTTP_200_OK)
+
         except Exception as e:
-            return self._server_error_response( message = "An unexpected error occurred", error =  str(e))
+            return self._server_error_response(
+                message="An unexpected error occurred", error=str(e)
+            )
 
     def put(self, request):
+        """Update user profile details."""
         try:
-            user, _ = self.get_user_from_token(request)
-            serializer = UserSerilzer(user, data=request.data, partial=True)
+            user_id, _ = self.get_user_from_token(request)
+            customer = get_object_or_404(Customer, pk=user_id)
+
+            serializer = UserSerilzer(customer, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response({"data": serializer.data},status=status.HTTP_200_OK)
+                cache.delete(f"user_profile_{user_id}")  # Clear cache after update
+                return Response({"data": serializer.data}, status=status.HTTP_200_OK)
+
             return self._bad_request(message=serializer.errors)
 
         except Exception as e:
-            return self._server_error_response( message = "An unexpected error occurred", error =  str(e))
-        
+            return self._server_error_response(
+                message="An unexpected error occurred", error=str(e)
+            )
 
 
 class UserForgotPassword(BaseTokenView):
