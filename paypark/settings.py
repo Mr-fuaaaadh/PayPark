@@ -78,6 +78,11 @@ WSGI_APPLICATION = 'paypark.wsgi.application'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
+CSRF_TRUSTED_ORIGINS = [
+    "http://13.49.23.95",  
+    "http://localhost", 
+]
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
