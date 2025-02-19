@@ -99,9 +99,9 @@ class CustomerBookdPlots(serializers.ModelSerializer):
     start_time = serializers.SerializerMethodField()
     end_date = serializers.SerializerMethodField()
     end_time = serializers.SerializerMethodField()
-    customer = serializers.CharField(source="user_id.name")
-    station = serializers.CharField(source="plot_id.owner_id.owner_name")
-    No = serializers.CharField(source="plot_id.plot_no")
+    customer = serializers.CharField(source="user.name")
+    station = serializers.CharField(source="plot.owner_id.owner_name")
+    No = serializers.CharField(source="plot.plot_no")
     
     class Meta :
         model = ParkingReservationPayment

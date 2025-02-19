@@ -373,9 +373,9 @@ class CustomerParkingPlotReservation(BaseTokenView):
     def get(self, request):
         try:
             user, _ = self.get_user_from_token(request)
-            user_reservations = ParkingReservationPayment.objects.filter(user=user)
+            customer = get_object_or_404(Customer, pk=user)
+            user_reservations = ParkingReservationPayment.objects.filter(user=customer)
             serializer = CustomerBookdPlots(user_reservations, many=True)
-
             return Response({"message": "success", "data": serializer.data}, status=status.HTTP_200_OK)
 
         except Exception as e:
