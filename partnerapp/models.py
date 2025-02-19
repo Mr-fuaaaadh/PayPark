@@ -154,7 +154,7 @@ class ParkingReservationPayment(models.Model):
         ('cash', 'Cash'),]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='parking_reservations')
+    user = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='payments')
     plot = models.ForeignKey(ParkingPlots, on_delete=models.CASCADE, related_name='reservations')
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()

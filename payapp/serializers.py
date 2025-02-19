@@ -136,18 +136,18 @@ class PaymentSerilizers(serializers.ModelSerializer):
 
     class Meta:
         model = ParkingReservationPayment
-        fields = ['_id','amount','payment_method','status','transaction_id','payment_date','payment_time']
+        fields = ['id','amount','payment_method','payment_status','order_id','reservation_status','payment_date','payment_time']
 
     def get_payment_date(self, obj):
         # Convert payment_date to Kerala time and extract the date
         indian_timezone = pytz.timezone("Asia/Kolkata")
-        local_time = localtime(obj.payment_date, indian_timezone)
+        local_time = localtime(obj.created_at, indian_timezone)
         return local_time.date()
 
     def get_payment_time(self, obj):
         # Convert payment_date to Kerala time and extract the time
         indian_timezone = pytz.timezone("Asia/Kolkata")
-        local_time = localtime(obj.payment_date, indian_timezone)
+        local_time = localtime(obj.created_at, indian_timezone)
         return local_time.strftime("%I:%M %p") 
     
     

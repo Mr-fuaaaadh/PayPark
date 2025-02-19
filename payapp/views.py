@@ -164,7 +164,6 @@ class UserProfileEdit(BaseTokenView):
             customer = get_object_or_404(Customer, pk=user_id)
 
             cache_key = f"user_profile_{user_id}"
-            print(cache_key)
             customer_data = cache.get(cache_key)
 
             if not customer_data:
