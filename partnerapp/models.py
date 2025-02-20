@@ -27,7 +27,8 @@ class PlotOnwners(models.Model):
     role = models.CharField(
         max_length=10,
         choices=[('admin', 'Admin'), ('operator', 'Operator')],
-        default='operator'
+        default='operator',
+        db_index=True
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -23,6 +23,9 @@ from django.http import Http404
 from celery import shared_task
 from payapp.razorpay import *
 from django.core.cache import cache
+import time
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.generics import ListAPIView
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +153,10 @@ class BaseTokenView(APIView):
 
 
     
-
+class CustomerParkingPlotReservationPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
        
         
@@ -351,38 +357,56 @@ class UserPasswordReset(UserProfileEdit):
 class CustomerGetAllVehiclesType(BaseTokenView):
     def get(self, request):
         try:
-            vehicle_type = Vehicle.objects.all()
+            cache_key = 'all_vehicle_types'
+            # Attempt to retrieve cached data
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                return Response({"message": "success", "data": cached_data},status=status.HTTP_200_OK)
+
+            vehicle_type = Vehicle.objects.all().only('vehicle_type_id')
             serializer = VehicleManagementSerializer(vehicle_type, many=True)
+            cache.set(cache_key, serializer.data, timeout=60 * 60)  # Cache for 1 hour
             return Response({"status": "success", "data": serializer.data}, status=status.HTTP_200_OK)
         except Exception as e:
             return self._server_error_response(message = "An unexpected error occurred" , error = str(e))
+            
 
 class GetAllParkStations(BaseTokenView):
-    def get(self,request):
-        try :
-            stations = PlotOnwners.objects.all()
-            serializer = ParkingStationSerializers(stations, many=True)
-            return Response({"message":"success","data":serializer.data},status=status.HTTP_200_OK)
-        except Exception as e :
-            return self._server_error_response(message = "An unexpected error occurred" , error = str(e))
-
-
-
-class CustomerParkingPlotReservation(BaseTokenView):
-
     def get(self, request):
         try:
-            user, _ = self.get_user_from_token(request)
-            customer = get_object_or_404(Customer, pk=user)
-            user_reservations = ParkingReservationPayment.objects.filter(user=customer)
-            serializer = CustomerBookdPlots(user_reservations, many=True)
-            return Response({"message": "success", "data": serializer.data}, status=status.HTTP_200_OK)
-
+            cache_key = 'all_park_stations'
+            # Attempt to retrieve cached data
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                return Response(
+                    {"message": "success", "data": cached_data},
+                    status=status.HTTP_200_OK
+                )
+            
+            stations = PlotOnwners.objects.all().only('ownerID')
+            serializer = ParkingStationSerializers(stations, many=True)
+            data = serializer.data
+            
+            # Cache the serialized data for 5 minutes (300 seconds)
+            cache.set(cache_key, data, timeout=300)
+            
+            return Response({"message": "success", "data": data},status=status.HTTP_200_OK)
         except Exception as e:
-            return Response(
-                {"success": False, "message": "An unexpected error occurred", "error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return self._server_error_response(message="An unexpected error occurred", error=str(e))
+
+
+
+class CustomerParkingPlotReservation(BaseTokenView, ListAPIView):
+    serializer_class = CustomerBookdPlots
+    pagination_class = CustomerParkingPlotReservationPagination
+
+    def get_queryset(self):
+        user, _ = self.get_user_from_token(self.request)
+        get_object_or_404(Customer, pk=user)
+        queryset = ParkingReservationPayment.objects.filter(user=user).select_related('user', 'plot')        
+        return queryset
+
+
 
 class CustomerCancelReservation(BaseTokenView):
     def put(self, request, id):
