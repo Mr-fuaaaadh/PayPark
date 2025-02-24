@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from django.conf import settings
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -28,6 +29,13 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["13.49.23.95","localhost", "0.0.0.0","127.0.0.1"]
 USE_X_FORWARDED_HOST = True
+SITE_URL = "http://13.49.23.95"  # Update with your actual server IP
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+}
 
 # Application definition
 
