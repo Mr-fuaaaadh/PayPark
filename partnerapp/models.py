@@ -9,7 +9,7 @@ import uuid
 
 # Create your models here.
 class PlotOnwners(models.Model):
-    ownerID = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    ownerID = models.UUIDField(default=uuid.uuid4, editable=False, unique=True,db_index=True)
     owner_name = models.CharField(max_length=100, null=False)
     owner_email = models.CharField(max_length=100,null=False, unique=True)
     owner_phone = models.CharField(max_length=15, unique=True, null=False)
@@ -30,8 +30,8 @@ class PlotOnwners(models.Model):
         default='operator',
         db_index=True
     )
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True,db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True,db_index=True)
 
     def __str__(self):
         return self.owner_name

@@ -27,7 +27,7 @@ import time
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.generics import ListAPIView
-
+from django.db.models import Prefetch
 logger = logging.getLogger(__name__)
 
 
@@ -373,31 +373,62 @@ class CustomerGetAllVehiclesType(BaseTokenView):
             
 
 class CustomPagination(PageNumberPagination):
-    page_size = 10  #
+    page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
 
 class GetAllParkStations(BaseTokenView):
     def get(self, request):
+        start_time = time.time()  # Log start time
+
         try:
-            cache_key = f'all_park_stations_page_{request.GET.get("page", 1)}'
+            page_number = request.GET.get("page", 1)
+            cache_key = f'all_park_stations_page_{page_number}'
             cached_data = cache.get(cache_key)
-            if cached_data is not None:
-                print("Cached data")
-                return Response({"message": "success", "data": cached_data}, status=status.HTTP_200_OK)
-            
-            stations = PlotOnwners.objects.all().only('ownerID')
+
+            if cached_data:
+                return Response(cached_data, status=status.HTTP_200_OK)  # ✅ Return full cached response
+
+            # Fetch data efficiently
+            stations = (
+                PlotOnwners.objects.filter(is_active=True)
+                .defer("ownerID")  # ✅ Exclude heavy, unused fields
+                .prefetch_related(
+                    Prefetch("pricing", queryset=ParkingCharge.objects.only("hourly_rate", "vehicle_type")),
+                    Prefetch("images", queryset=Images.objects.only("image")),
+                    Prefetch("plots", queryset=ParkingPlots.objects.only("plot_no", "status")),
+                    Prefetch("reviews", queryset=Review.objects.only("rating", "review_text")),
+                )
+                .order_by("created_at")
+            )
+
+            # Apply pagination
             paginator = CustomPagination()
             result_page = paginator.paginate_queryset(stations, request)
+
+            # Serialize data
             serializer = ParkingStationSerializers(result_page, many=True)
             data = serializer.data
-            
-            # Cache the serialized paginated data for 5 minutes (300 seconds)
-            cache.set(cache_key, data, timeout=1000)
-            
-            return paginator.get_paginated_response({"message": "success", "data": data})
+
+            # Construct full paginated response
+            paginated_response = paginator.get_paginated_response(data).data  # ✅ Get full paginated response
+
+            # Cache the paginated response for 5 minutes (300 seconds)
+            cache.set(cache_key, paginated_response, timeout=300)
+
+            response = Response(paginated_response, status=status.HTTP_200_OK)  # ✅ Return full response
+
+            # Log response time
+            end_time = time.time()
+            # print(f"API Response Time: {end_time - start_time:.3f} seconds")  # Log API speed
+
+            return response
+
         except Exception as e:
-            return self._server_error_response(message="An unexpected error occurred", error=str(e))
+            end_time = time.time()
+            # print(f"Error! Response Time: {end_time - start_time:.3f} seconds")  # Log error time
+            return Response({"message": "An unexpected error occurred", "error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 
