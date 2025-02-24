@@ -97,10 +97,16 @@ JWT_EXPIRATION_MINUTES = 43200
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'paypark_db',
+        'USER': 'postgres',
+        'PASSWORD': 'paypark123',
+        'HOST': 'database-1.cfkow6wii8w5.eu-north-1.rds.amazonaws.com',  
+        'PORT': '5432', 
     }
 }
+
+
 
 
 # Password validation

@@ -25,6 +25,7 @@ from payapp.razorpay import *
 from django.core.cache import cache
 import time
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.generics import ListAPIView
 
 logger = logging.getLogger(__name__)
@@ -371,26 +372,30 @@ class CustomerGetAllVehiclesType(BaseTokenView):
             return self._server_error_response(message = "An unexpected error occurred" , error = str(e))
             
 
+class CustomPagination(PageNumberPagination):
+    page_size = 10  #
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class GetAllParkStations(BaseTokenView):
     def get(self, request):
         try:
-            cache_key = 'all_park_stations'
-            # Attempt to retrieve cached data
+            cache_key = f'all_park_stations_page_{request.GET.get("page", 1)}'
             cached_data = cache.get(cache_key)
             if cached_data is not None:
-                return Response(
-                    {"message": "success", "data": cached_data},
-                    status=status.HTTP_200_OK
-                )
+                print("Cached data")
+                return Response({"message": "success", "data": cached_data}, status=status.HTTP_200_OK)
             
             stations = PlotOnwners.objects.all().only('ownerID')
-            serializer = ParkingStationSerializers(stations, many=True)
+            paginator = CustomPagination()
+            result_page = paginator.paginate_queryset(stations, request)
+            serializer = ParkingStationSerializers(result_page, many=True)
             data = serializer.data
             
-            # Cache the serialized data for 5 minutes (300 seconds)
-            cache.set(cache_key, data, timeout=300)
+            # Cache the serialized paginated data for 5 minutes (300 seconds)
+            cache.set(cache_key, data, timeout=1000)
             
-            return Response({"message": "success", "data": data},status=status.HTTP_200_OK)
+            return paginator.get_paginated_response({"message": "success", "data": data})
         except Exception as e:
             return self._server_error_response(message="An unexpected error occurred", error=str(e))
 
@@ -449,7 +454,6 @@ class RazorpayPaymentInitiation(BaseTokenView):
         end_time = validated_data["end_time"]  
         amount = validated_data["amount"]
 
-        # Debugging: Log the received data
 
         # Validate plot existence
         plot = get_object_or_404(ParkingPlots, pk=plot_id)
