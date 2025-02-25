@@ -15,6 +15,7 @@ class Customer(models.Model):
     password = models.CharField(max_length=255, null=False)
     profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=False, db_index=True)
 
     def save(self, *args, **kwargs):
         if not self.password.startswith('pbkdf2_'): 

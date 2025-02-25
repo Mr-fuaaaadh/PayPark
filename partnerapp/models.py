@@ -30,7 +30,7 @@ class PlotOnwners(models.Model):
         default='operator',
         db_index=True
     )
-    is_active = models.BooleanField(default=True,db_index=True)
+    is_active = models.BooleanField(default =True,db_index=True)
     created_at = models.DateTimeField(auto_now_add=True,db_index=True)
 
     def __str__(self):

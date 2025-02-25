@@ -54,7 +54,7 @@ class UserLoginAPIView(APIView):
             email = request.data.get('email')
             password = request.data.get('password')
             
-            customer = Customer.objects.filter(email=email).first()
+            customer = Customer.objects.filter(email=email, is_active=True).first()
 
             if customer and check_password(password, customer.password):
                 # Generate JWT token
@@ -279,7 +279,13 @@ class UserPasswordResetOtpVerification(UserForgotPassword):
         otp_record = OTP.objects.filter(user=user, otp=otp).first()
         if not otp_record:
             return False
-    
+        try:
+            customer = Customer.objects.get(user=user)  # Assuming Customer has a OneToOneField with User
+            customer.is_active = True
+            customer.save()
+        except Customer.DoesNotExist:
+            return False
+
         return True
 
 
